@@ -1,7 +1,9 @@
-we have 218823 test images
-        401059 train images
+train-metadata.csv
+        400 000 samples
+test-metadata.csv
+        3 samples without 'target' column
 
-! unbalanced target
+! unbalanced target (training set)
 0    400666
 1       393
 

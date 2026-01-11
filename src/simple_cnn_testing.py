@@ -3,8 +3,13 @@ from sklearn.model_selection import train_test_split
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader
+from torchvision import transforms
+from custom_datasets import SkinLesionDataset
+from pathlib import Path
+from tqdm import tqdm
 
-df = pd.read_csv('../data/train-metadata.csv')
+df = pd.read_csv('data/train-metadata.csv')
 
 df_malignant = df[df['target'] == 1]
 df_benign = df[df['target'] == 0]
@@ -42,33 +47,33 @@ print(f"Val Set: {len(val_df)} images ({val_df['target'].sum()} Malignant)")
 print(f"Test Set: {len(test_df)} images ({test_df['target'].sum()} Malignant)")
 
 train_transforms = transforms.Compose([
+    transforms.ToTensor(),
     transforms.Resize((128, 128)),
     # other augmentations for train dataset
-    transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], # ImageNet mean and std
                          std=[0.229, 0.224, 0.225])
 ])
 val_transforms = transforms.Compose([
-    transforms.Resize((128, 128)),
     transforms.ToTensor(),
+    transforms.Resize((128, 128)),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225])
 ])
 test_transforms = transforms.Compose([
-    transforms.Resize((128, 128)),
     transforms.ToTensor(),
+    transforms.Resize((128, 128)),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225])
 ])
 
 train_ds = SkinLesionDataset(dataframe=train_df,
-                             root_dir=Path('../data/train-image/image'),
+                             root_dir=Path('data/train-image/image'),
                              transforms=train_transforms)
 val_ds = SkinLesionDataset(dataframe=val_df,
-                           root_dir=Path('../data/train-image/image'),
+                           root_dir=Path('data/train-image/image'),
                            transforms=val_transforms)
 test_ds = SkinLesionDataset(dataframe=test_df,
-                            root_dir=Path('../data/train-image/image'),
+                            root_dir=Path('data/train-image/image'),
                             transforms=test_transforms)
 
 train_loader = DataLoader(train_ds, batch_size=32)
@@ -108,29 +113,24 @@ criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 def train_one_epoch(model, loader, optimizer, criterion, device):
-    model.train() # Set model to training mode (enables Dropout/BatchNorm)
+    model.train()
     running_loss = 0.0
     correct = 0
     total = 0
-    
-    for images, labels in loader:
+
+    for images, labels in tqdm(loader):
         images, labels = images.to(device), labels.to(device)
         
-        # 1. Forward Pass
         outputs = model(images) 
         
-        # Important: labels need to be float and shape [batch, 1] to match outputs
         loss = criterion(outputs, labels.view(-1, 1).float())
         
-        # 2. Backward Pass
-        optimizer.zero_grad() # Clear old gradients
-        loss.backward()       # Calculate new gradients
-        optimizer.step()      # Update weights
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
         
-        # 3. Metrics
         running_loss += loss.item()
         
-        # Convert raw logits to probabilities (Sigmoid) -> then round to 0 or 1
         predicted = torch.sigmoid(outputs) > 0.5
         total += labels.size(0)
         correct += (predicted.view(-1) == labels).sum().item()
@@ -140,12 +140,11 @@ def train_one_epoch(model, loader, optimizer, criterion, device):
     return avg_loss, acc
 
 def validate(model, loader, criterion, device):
-    model.eval() # Set model to evaluation mode (freezes BatchNorm/Dropout)
+    model.eval()
     running_loss = 0.0
     correct = 0
     total = 0
     
-    # No gradients needed for validation (saves memory)
     with torch.no_grad():
         for images, labels in loader:
             images, labels = images.to(device), labels.to(device)
@@ -167,10 +166,7 @@ EPOCHS = 10
 print("Starting Training...")
 
 for epoch in range(EPOCHS):
-    # Train
     train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, criterion, device)
-    
-    # Validate
     val_loss, val_acc = validate(model, val_loader, criterion, device)
     
     print(f"Epoch [{epoch+1}/{EPOCHS}]")

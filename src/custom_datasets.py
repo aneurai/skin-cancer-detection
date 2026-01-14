@@ -56,13 +56,11 @@ class SkinLesionDatasetWithSynthetic(SkinLesionDataset):
 
         base = str(row.iloc[0])  # filename stem
 
-        # Real image (always .jpg)
         real_path = self.real_root / f"{base}.jpg"
 
         if real_path.exists():
             img_path = real_path
         else:
-            # Synthetic image (always .png)
             img_path = self.synth_root / f"{base}"
 
         image = Image.open(img_path).convert("RGB")

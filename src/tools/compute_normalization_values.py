@@ -12,7 +12,7 @@ if __name__ == "__main__":
     ])
 
     # Load dataset
-    dataset = datasets.ImageFolder("data/train-image", transform=transform)
+    dataset = datasets.ImageFolder("../data/train-image", transform=transform)
     loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=128,

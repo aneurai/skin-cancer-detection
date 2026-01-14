@@ -9,7 +9,7 @@ from custom_datasets import SkinLesionDataset
 from pathlib import Path
 from tqdm import tqdm
 
-df = pd.read_csv('data/train-metadata.csv')
+df = pd.read_csv('../data/train-metadata.csv')
 
 df_malignant = df[df['target'] == 1]
 df_benign = df[df['target'] == 0]
@@ -30,7 +30,7 @@ val_ben, train_ben = train_test_split(train_val_ben, test_size=None, train_size=
 
 # Downsample Benign to a 1:5 ratio (300 Malignant : 1500 Benign)
 # This gives the model a chance to actually see the cancer.
-train_ben_downsampled = train_ben.sample(n=1500)
+train_ben_downsampled = train_ben.sample(n=293)
 
 # Concatenate back together
 train_df = pd.concat([train_mal, train_ben_downsampled])
@@ -67,13 +67,13 @@ test_transforms = transforms.Compose([
 ])
 
 train_ds = SkinLesionDataset(dataframe=train_df,
-                             root_dir=Path('data/train-image/image'),
+                             root_dir=Path('../data/train-image/image'),
                              transforms=train_transforms)
 val_ds = SkinLesionDataset(dataframe=val_df,
-                           root_dir=Path('data/train-image/image'),
+                           root_dir=Path('../data/train-image/image'),
                            transforms=val_transforms)
 test_ds = SkinLesionDataset(dataframe=test_df,
-                            root_dir=Path('data/train-image/image'),
+                            root_dir=Path('../data/train-image/image'),
                             transforms=test_transforms)
 
 train_loader = DataLoader(train_ds, batch_size=32)
@@ -107,7 +107,9 @@ class SimpleCNN(nn.Module):
         return self.fc(x)
     
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print("Using device:", device)
 model = SimpleCNN().to(device)
+print(next(model.parameters()).device)
 # maybe add pos_weight to tell model to pay more attention to malignant cases
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)

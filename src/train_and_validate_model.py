@@ -11,9 +11,9 @@ from pathlib import Path
 from tqdm import tqdm
 import numpy as np
 from sklearn.metrics import confusion_matrix
-
 from custom_datasets import SkinLesionDataset, SkinLesionDatasetWithSynthetic
-
+from src.models.UpgradedCNN import UpgradedCNN
+from src.components.EarlyStopping import EarlyStopping
 
 def load_and_split_metadata(csv_path):
     df = pd.read_csv(csv_path)
@@ -68,9 +68,6 @@ def create_datasets(train_df, val_df, test_df, root_dir):
     val_ds = SkinLesionDataset(val_df, root_dir, t)
     test_ds = SkinLesionDataset(test_df, root_dir, t)
 
-    print("NaN count:", train_df.isna().sum())
-    print(train_df[train_df.isna().any(axis=1)].head())
-
     return train_ds, val_ds, test_ds
 
 
@@ -79,64 +76,6 @@ def create_loaders(train_ds, val_ds, test_ds, batch_size=32):
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
     return train_loader, val_loader, test_loader
-
-
-class SimpleCNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(32)
-        self.relu = nn.ReLU(inplace=True)
-        self.pool = nn.MaxPool2d(2)
-
-        self.flatten = nn.Flatten()
-        self.fc = nn.Sequential(
-            nn.Linear(32 * 64 * 64, 256),
-            nn.ReLU(),
-            nn.Linear(256, 1)
-        )
-
-    def forward(self, x):
-        x = self.pool(self.relu(self.bn1(self.conv1(x))))
-        x = self.flatten(x)
-        return self.fc(x)
-
-
-class UpgradedCNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-        self.features = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-
-            nn.Conv2d(64, 128, 3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-
-            nn.Conv2d(128, 256, 3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d(1)
-        )
-
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.4),
-            nn.Linear(256, 1)
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        return self.classifier(x)
 
 
 def train_one_epoch(model, loader, optimizer, criterion, device):
@@ -251,31 +190,6 @@ def plot_confusion_matrices(model, device, loaders, image_name):
     plt.show()
 
 
-class EarlyStopping:
-    def __init__(self, patience=5, min_delta=0):
-        """
-        patience: how many epochs to wait before stopping
-        min_delta: minimum improvement in validation loss to count as progress
-        """
-        self.patience = patience
-        self.min_delta = min_delta
-        self.best_loss = None
-        self.counter = 0
-        self.should_stop = False
-
-    def step(self, val_loss):
-        if self.best_loss is None:
-            self.best_loss = val_loss
-            return
-
-        if val_loss < self.best_loss - self.min_delta:
-            self.best_loss = val_loss
-            self.counter = 0
-        else:
-            self.counter += 1
-            if self.counter >= self.patience:
-                self.should_stop = True
-
 def main():
 
     train_df, val_df, test_df = load_and_split_metadata("data/train-metadata.csv")
@@ -312,25 +226,21 @@ def main():
         print(
             f"Epoch {epoch + 1}: Train Acc {tr_acc:.2f} |  Val Acc {val_acc:.2f} | Val Rec {val_rec:.3f} | Val F1 {val_f1:.3f} | Val Prec {val_prec:.3f}")
 
-        # ----- BEST MODEL CHECKPOINTING -----
         if val_rec > best_val_recall:
             best_val_recall = val_rec
             torch.save(model.state_dict(), best_model_path)
             print(f"  -> New best model saved (recall = {best_val_recall:.3f})")
 
-    # After all epochs: load the best model
     model.load_state_dict(torch.load(best_model_path, map_location=device))
 
     plot_training_curves(history, "synth3_plot.jpg")
 
-    # Recompute validation metrics with the best model
     val_loss, val_acc, val_prec, val_rec, val_f1 = validate(model, val_loader, criterion, device)
     print(
         f"Val Loss: {val_loss:.4f} | Acc: {val_acc:.2f}% | "
         f"Precision: {val_prec:.3f} | Recall: {val_rec:.3f} | F1: {val_f1:.3f}"
     )
 
-    # Now test with the BEST checkpoint
     test_loss, test_acc, test_prec, test_rec, test_f1 = validate(model, test_loader, criterion, device)
     print(
         f"Test Loss: {test_loss:.4f} | Acc: {test_acc:.2f}% | "
@@ -339,59 +249,6 @@ def main():
 
     loaders = {"Train": train_loader, "Validation": val_loader, "Test": test_loader}
     plot_confusion_matrices(model, device, loaders, "synth3_mc.jpg")
-
-
-# def main():
-#
-#     train_df, val_df, test_df = load_and_split_metadata("data/train-metadata.csv")
-#     synth_df = load_synthetic_df("data/train-image/synthetic", label=1)
-#     train_df = pd.concat([train_df, synth_df], ignore_index=True)
-#     print(f"Synth Training Set: {len(train_df)} images ({train_df['target'].sum()} Malignant)")
-#
-#     train_ds, val_ds, test_ds = create_datasets(
-#         train_df, val_df, test_df, Path("data/train-image/image")
-#     )
-#
-#     train_loader, val_loader, test_loader = create_loaders(train_ds, val_ds, test_ds)
-#
-#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#     model = SimpleCNN().to(device)
-#     criterion = nn.BCEWithLogitsLoss()
-#     optimizer = optim.Adam(model.parameters(), lr=0.0001)
-#
-#     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
-#     early_stopper = EarlyStopping(patience=6, min_delta=0.0001)
-#
-#     for epoch in range(5):
-#         tr_loss, tr_acc = train_one_epoch(model, train_loader, optimizer, criterion, device)
-#         val_loss, val_acc, val_prec, val_rec, val_f1 = validate(model, val_loader, criterion, device)
-#
-#         history['train_loss'].append(tr_loss)
-#         history['train_acc'].append(tr_acc)
-#         history['val_loss'].append(val_loss)
-#         history['val_acc'].append(val_acc)
-#
-#         print()
-#         print(f"Epoch {epoch+1}: Train Acc {tr_acc:.2f} | Val Acc {val_acc:.2f}")
-#         # early_stopper.step(val_loss)
-#         # if early_stopper.should_stop:
-#         #     print("Early stopping triggered — training halted.")
-#         #     break
-#
-#     val_loss, val_acc, val_prec, val_rec, val_f1 = validate(model, val_loader, criterion, device)
-#     plot_training_curves(history, "synth1.jpg")
-#
-#     print(
-#         f"Val Loss: {val_loss:.4f} | Acc: {val_acc:.2f}% | " f"Precision: {val_prec:.3f} | Recall: {val_rec:.3f} | F1: {val_f1:.3f}")
-#
-#     test_loss, test_acc, test_prec, test_rec, test_f1 = validate(model, test_loader, criterion, device)
-#
-#     print(
-#         f"Test Loss: {test_loss:.4f} | Acc: {test_acc:.2f}% | " f"Precision: {test_prec:.3f} | Recall: {test_rec:.3f} | F1: {test_f1:.3f}")
-#
-#     loaders = {"Train": train_loader, "Validation": val_loader, "Test": test_loader}
-#     plot_confusion_matrices(model, device, loaders, "synth1_mc.jpg")
-#
 
 if __name__ == "__main__":
     main()

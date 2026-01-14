@@ -50,3 +50,6 @@ Test Loss: 0.3896 | Acc: 83.52% | Precision: 0.178 | Recall: 0.680 | F1: 0.282
 # 1:1 ratio (293 + 15000 (synth) malignant, 15293 benign) lr = 0.0001
 Val Loss: 4.3953 | Acc: 37.81% | Precision: 0.055 | Recall: 0.740 | F1: 0.102\
 Test Loss: 4.4285 | Acc: 35.71% | Precision: 0.044 | Recall: 0.600 | F1: 0.082
+
+![synth3_mc.jpg](images%2Fsynth3_mc.jpg)
+![synth3_plot.jpg](images%2Fsynth3_plot.jpg)

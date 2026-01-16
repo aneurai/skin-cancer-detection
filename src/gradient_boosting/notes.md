@@ -9,4 +9,4 @@
 * how stratified group k fold works?
 * what is auc roc and why it was used?
 * how gradient boosting works in lightgbm?
-* why lightgbm used instead of xgboost or catboost?
+* why lightgbm used instead of xgboost or catboost? 

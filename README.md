@@ -1,8 +1,19 @@
 # Skin Cancer Detection
-* what is main data
-* what is the competition, ISIC
-* what is the main task
-* notes about machine that makes images TBP
+
+![Lesions and vectra machine from kaggle](https://www.kaggle.com/competitions/63056/images/header)
+
+## Overview
+This project is an idea from Kaggle competition **ISIC 2024 - Skin Cancer Detection with 3D-TBP**.
+
+Images data attached to this competition consists of single-lesion crops extracted from **3D Total Body Photos (TBP)** from VECTRA WB360 by Canfield Scientific (92 cameras capturing entire skin surface).
+
+Main task is to predict the probability that a specific lesion is **malignant (1)** or **benign (0)**.
+
+Evaluation metric is **pAUC (Partial Area Under the ROC Curve)** specifically above an 80% **True Positive Rate (TPR)**, prioritizing high sensitivity for clinical triage.
+
+Our project includes two approaches. First focuses on **neural networks**. TODO OSKAR
+
+Second one is about usage of **gradient boosting** techniques with tabular data provided by kaggle in `train-metadata.csv`.
 
 ## General Data Exploration
 
@@ -391,5 +402,6 @@ Test Partial AUC: `0.1732` 🏆
     ![CM Fold Test](images/gbdt/14/cm_fold_test.jpg)
 
 
+## Thanks for reading! Stay hard researchers 🦾
 
-> A lot of work has been done with the help of this [notebook](https://www.kaggle.com/code/greysky/isic-2024-only-tabular-data/comments?scriptVersionId=195713838). Big thank you!
+> Some tabular work has been done with the help of this [notebook](https://www.kaggle.com/code/greysky/isic-2024-only-tabular-data/comments?scriptVersionId=195713838). Big thank you!

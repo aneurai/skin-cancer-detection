@@ -1,6 +1,6 @@
 # Skin Cancer Detection
 
-![](https://www.kaggle.com/competitions/63056/images/header)
+![Project Image](images/project_image.jpg)
 
 ## Overview
 This project is an idea from Kaggle competition **ISIC 2024 - Skin Cancer Detection with 3D-TBP**.
@@ -14,7 +14,7 @@ Evaluation metric is **pAUC (Partial Area Under the ROC Curve)** specifically ab
 Our project includes two approaches. First focuses on **neural networks**. TODO OSKAR
 
 Second one is about usage of **gradient boosting** techniques with tabular data provided by kaggle in `train-metadata.csv`.
-
+ 
 ## General Data Exploration
 
 * Dataset consists of:

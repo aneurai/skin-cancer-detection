@@ -398,8 +398,8 @@ Only architectures that i consider successful were EfficientNetB3 and Model4\
 
 Failed architectures:
 
-- Model 3 - pAUC 0.0453 
-- Model 2 - pAUC 0.0835
+- Model 2 - pAUC 0.0453 
+- Model 3 - pAUC 0.0835
 
 ## Model 4
 
